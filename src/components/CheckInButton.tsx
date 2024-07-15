@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import dayJs from 'dayjs';
-import { getLocalStorage, setLocalStorage } from '../utils';
-
-type CheckInType = 'morning' | 'night';
-type dayData = { date: string; morning: string | null; night: string | null };
+import { getLocalStorage, setLocalStorage, dayJs, newDate } from '../utils';
+import { CheckInType, dayData } from '../types';
 
 const CheckInButton = () => {
   const [type, setType] = useState<CheckInType>('morning');
@@ -40,7 +37,7 @@ const CheckInButton = () => {
     [type]
   );
   const handleCheckIn = useCallback(() => {
-    const now = new Date();
+    const now = newDate();
     setLocalStorage(`${type}`, String(now));
     if (type === 'morning') {
       setMorning(dayJs(now).format('MM-DD HH-mm'));
@@ -53,6 +50,7 @@ const CheckInButton = () => {
     updateWeekData(now);
   }, [type, updateWeekData]);
 
+  // 初始化
   useEffect(() => {
     const morningDate = getLocalStorage('morning');
     const nightDate = getLocalStorage('night');
@@ -66,7 +64,7 @@ const CheckInButton = () => {
     }
     if (morningDate) {
       const dayJSmorningDate = dayJs(morningDate);
-      if (dayJSmorningDate.format('dd') === dayJs(new Date()).format('dd')) {
+      if (dayJSmorningDate.format('dd') === dayJs(newDate()).format('dd')) {
         setType('night');
       }
       setMorning(dayJSmorningDate.format('MM-DD HH-mm'));
@@ -75,10 +73,12 @@ const CheckInButton = () => {
     nightDate && setNight(dayJs(nightDate).format('MM-DD HH-mm'));
   }, []);
 
+  // 本周已经工作时长
   useEffect(() => {
     let totalSeconds = 0;
     weekData.forEach((data) => {
-      if (data.morning && data.night) {
+      const currWeek = dayJs(newDate()).week();
+      if (data.morning && data.night && currWeek === dayJs(data.date).week()) {
         const morningTime = dayJs(data.morning);
         const nightTime = dayJs(data.night);
         const diffSeconds = nightTime.diff(morningTime, 'second');
@@ -94,12 +94,13 @@ const CheckInButton = () => {
     setWeeklyDuration(`${hours} 小时 ${minutes} 分 ${seconds} 秒`);
   }, [weekData]);
 
+  // 今天已经工作时长
   useEffect(() => {
     let timerId: number | undefined = void 0;
     if (morning && night) {
       const morningTime = dayJs(getLocalStorage('morning'));
       const updateDuration = () => {
-        const now = new Date();
+        const now = newDate();
         const currentTime = dayJs(now);
         const diffSeconds = currentTime.diff(morningTime, 'second');
         const hours = Math.floor(diffSeconds / 3600);
@@ -122,7 +123,10 @@ const CheckInButton = () => {
 
   return (
     <>
-      <button className={type === 'morning' ? 'btn btn-outline' : 'btn'} onClick={handleCheckIn}>
+      <button
+        className={type === 'morning' ? 'btn btn-outline' : 'btn btn-accent'}
+        onClick={handleCheckIn}
+      >
         {type === 'morning' ? '早上打卡' : '晚上打卡'}
       </button>
       <div className="card w-96 shadow-xl bg-teal-100 mt-6">
