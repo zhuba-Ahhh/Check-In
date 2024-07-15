@@ -2,26 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import dayJs from 'dayjs';
 import { getLocalStorage, setLocalStorage } from '../utils';
 
+type CheckInType = 'morning' | 'night';
 type dayData = { date: string; morning: string | null; night: string | null };
 
 const CheckInButton = () => {
-  const [type, setType] = useState<'night' | 'morning'>('morning');
+  const [type, setType] = useState<CheckInType>('morning');
   const [morning, setMorning] = useState<string | null>(null);
   const [night, setNight] = useState<string | null>(null);
   const [weekData, setWeekData] = useState<Array<dayData>>([]);
-  const handleCheckIn = () => {
-    const now = new Date();
-    setLocalStorage(`${type}`, String(now));
-    if (type === 'morning') {
-      setMorning(dayJs(now).format('MM-DD HH-mm'));
-      setType('night');
-    } else {
-      setNight(dayJs(now).format('MM-DD HH-mm'));
-    }
-
-    // 更新weekData
-    updateWeekData(now);
-  };
+  const [duration, setDuration] = useState<string | null>(null);
+  const [weeklyDuration, setWeeklyDuration] = useState<string | null>(null);
 
   const updateWeekData = useCallback(
     (now: Date) => {
@@ -49,10 +39,23 @@ const CheckInButton = () => {
     },
     [type]
   );
+  const handleCheckIn = useCallback(() => {
+    const now = new Date();
+    setLocalStorage(`${type}`, String(now));
+    if (type === 'morning') {
+      setMorning(dayJs(now).format('MM-DD HH-mm'));
+      setType('night');
+    } else {
+      setNight(dayJs(now).format('MM-DD HH-mm'));
+    }
+
+    // 更新weekData
+    updateWeekData(now);
+  }, [type, updateWeekData]);
 
   useEffect(() => {
-    const morningDate = dayJs(getLocalStorage('morning'));
-    const nightDate = dayJs(getLocalStorage('night'));
+    const morningDate = getLocalStorage('morning');
+    const nightDate = getLocalStorage('night');
     const weekData = getLocalStorage('weekData');
     try {
       if (weekData) {
@@ -61,16 +64,16 @@ const CheckInButton = () => {
     } catch (error) {
       console.error(error);
     }
-    if (morningDate.format('dd') === dayJs(new Date()).format('dd')) {
-      setType('night');
+    if (morningDate) {
+      const dayJSmorningDate = dayJs(morningDate);
+      if (dayJSmorningDate.format('dd') === dayJs(new Date()).format('dd')) {
+        setType('night');
+      }
+      setMorning(dayJSmorningDate.format('MM-DD HH-mm'));
     }
-    morningDate && setMorning(morningDate.format('MM-DD HH-mm'));
-    nightDate && setNight(nightDate.format('MM-DD HH-mm'));
+
+    nightDate && setNight(dayJs(nightDate).format('MM-DD HH-mm'));
   }, []);
-
-  const [duration, setDuration] = useState<string | null>(null);
-
-  const [weeklyDuration, setWeeklyDuration] = useState<string | null>(null);
 
   useEffect(() => {
     let totalSeconds = 0;
@@ -79,9 +82,11 @@ const CheckInButton = () => {
         const morningTime = dayJs(data.morning);
         const nightTime = dayJs(data.night);
         const diffSeconds = nightTime.diff(morningTime, 'second');
-        totalSeconds += diffSeconds;
+        if (diffSeconds > 0) totalSeconds += diffSeconds;
       }
     });
+
+    if (totalSeconds < 1) return;
 
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds - hours * 3600) / 60);
@@ -124,8 +129,8 @@ const CheckInButton = () => {
         <div className="card-body">
           <h2>上次早上打卡时间: {morning}</h2>
           <h2>上次晚上打卡时间: {night}</h2>
-          <h2>今天已经工作时间: {duration}</h2>
-          <h2>本周已经工作时间: {weeklyDuration}</h2>
+          <h2>今天已经工作时长: {duration}</h2>
+          <h2>本周已经工作时长: {weeklyDuration}</h2>
         </div>
       </div>
     </>
