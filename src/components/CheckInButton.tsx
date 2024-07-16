@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getLocalStorage, setLocalStorage, dayJs, newDate } from '../utils';
 import { CheckInType, dayData } from '../types';
+import { Dayjs } from 'dayjs';
 
 const CheckInButton = () => {
   const [type, setType] = useState<CheckInType>('morning');
@@ -12,24 +13,26 @@ const CheckInButton = () => {
 
   const updateWeekData = useCallback(
     (now: Date) => {
+      const stringNow = String(now);
+      const dateKey = dayJs(now).format('YYYY-MM-DD');
       // 更新weekData
       setWeekData((prevData) => {
         const newData = [...prevData];
-        const dateKey = dayJs(now).format('YYYY-MM-DD');
         const index = newData.findIndex((item) => item.date === dateKey);
         if (index !== -1) {
           if (type === 'morning') {
-            newData[index].morning = String(now);
+            newData[index].morning = stringNow;
           } else {
-            newData[index].night = String(now);
+            newData[index].night = stringNow;
           }
         } else {
           newData.push({
             date: dateKey,
-            morning: type === 'morning' ? dayJs(now).format('HH:mm') : null,
-            night: type === 'night' ? dayJs(now).format('HH:mm') : null,
+            morning: type === 'morning' ? stringNow : null,
+            night: type === 'night' ? stringNow : null,
           });
         }
+
         setLocalStorage(`weekData`, JSON.stringify(newData));
         return newData;
       });
@@ -65,7 +68,7 @@ const CheckInButton = () => {
     }
     if (morningDate) {
       const dayJSmorningDate = dayJs(morningDate);
-      if (dayJSmorningDate.format('dd') === dayJs(newDate()).format('dd')) {
+      if (dayJSmorningDate.format('dd') === dayJs().format('dd')) {
         setType('night');
       }
       setMorning(dayJSmorningDate.format('MM-DD HH-mm'));
@@ -77,22 +80,28 @@ const CheckInButton = () => {
   // 本周已经工作时长
   useEffect(() => {
     let totalSeconds = 0;
-    weekData.forEach((data) => {
-      const currWeek = dayJs(newDate()).week();
-      if (data.morning && data.night && currWeek === dayJs(data.date).week()) {
-        const morningTime = dayJs(data.morning);
-        const nightTime = dayJs(data.night);
-        const diffSeconds = nightTime.diff(morningTime, 'second');
-        if (diffSeconds > 0) totalSeconds += diffSeconds;
-      }
-    });
+    const currentWeek = dayJs().week();
+    const morningToNightDiff = (morning: Dayjs, night: Dayjs) => night.diff(morning, 'second');
+    // 遍历weekData，只计算当前周的工作时长
+    for (let i = 0; i < weekData.length; i++) {
+      const data = weekData[i];
+      const { date, morning, night } = data;
 
-    if (totalSeconds < 1) return;
+      // 快速检查，避免不必要的dayJs转换和计算
+      if (!morning || !night || dayJs(date).week() !== currentWeek) continue;
 
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds - hours * 3600) / 60);
-    const seconds = totalSeconds % 60;
-    setWeeklyDuration(`${hours} 小时 ${minutes} 分 ${seconds} 秒`);
+      // 计算差值，确保为正数
+      const diffSeconds = morningToNightDiff(dayJs(morning), dayJs(night));
+      if (diffSeconds > 0) totalSeconds += diffSeconds;
+    }
+
+    // 只有当总秒数大于0时才进行格式化
+    if (totalSeconds > 0) {
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      setWeeklyDuration(`${hours} 小时 ${minutes} 分 ${seconds} 秒`);
+    }
   }, [weekData]);
 
   // 今天已经工作时长
@@ -129,7 +138,7 @@ const CheckInButton = () => {
         className={type === 'morning' ? 'btn btn-outline' : 'btn btn-accent'}
         onClick={handleCheckIn}
       >
-        {type === 'morning' ? '早上打卡' : '晚上打卡'}
+        <h2>{type === 'morning' ? '早上打卡' : '晚上打卡'}</h2>
       </button>
       <div className="card w-96 shadow-xl bg-teal-100 mt-6">
         <div className="card-body">
