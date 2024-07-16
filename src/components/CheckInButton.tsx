@@ -19,9 +19,9 @@ const CheckInButton = () => {
         const index = newData.findIndex((item) => item.date === dateKey);
         if (index !== -1) {
           if (type === 'morning') {
-            newData[index].morning = String(dayJs(now));
+            newData[index].morning = String(now);
           } else {
-            newData[index].night = String(dayJs(now));
+            newData[index].night = String(now);
           }
         } else {
           newData.push({
@@ -36,6 +36,7 @@ const CheckInButton = () => {
     },
     [type]
   );
+  // 点击打卡按钮
   const handleCheckIn = useCallback(() => {
     const now = newDate();
     setLocalStorage(`${type}`, String(now));
@@ -108,6 +109,7 @@ const CheckInButton = () => {
         const seconds = diffSeconds % 60;
         setDuration(`${hours} 小时 ${minutes} 分 ${seconds} 秒`);
         setLocalStorage(`night`, String(now));
+
         updateWeekData(now);
       };
 
