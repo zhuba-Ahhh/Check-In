@@ -11,11 +11,11 @@ function App() {
   }, []);
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
+    <div className="flex justify-center items-center h-screen">
       {isLoading ? (
         <Loading />
       ) : (
-        <div className="flex justify-center flex-col items-center">
+        <div className="flex flex-col items-center">
           <CheckInButton />
         </div>
       )}
