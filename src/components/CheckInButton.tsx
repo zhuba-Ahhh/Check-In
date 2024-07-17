@@ -138,14 +138,14 @@ const CheckInButton = () => {
         className={type === 'morning' ? 'btn btn-outline' : 'btn btn-accent'}
         onClick={handleCheckIn}
       >
-        <h2>{type === 'morning' ? '早上打卡' : '晚上打卡'}</h2>
+        <h2 className="text-lg font-bold">{type === 'morning' ? '早上打卡' : '晚上打卡'}</h2>
       </button>
-      <div className="card w-96 shadow-xl bg-teal-100 mt-6">
+      <div className="card w-90 shadow-xl bg-teal-100 mt-6">
         <div className="card-body">
-          <h2>上次早上打卡时间: {morning}</h2>
-          <h2>上次晚上打卡时间: {night}</h2>
-          <h2>今天已经工作时长: {duration}</h2>
-          <h2>本周已经工作时长: {weeklyDuration}</h2>
+          <h2 className="text-lg font-semibold">上次早上打卡时间: {morning}</h2>
+          <h2 className="text-lg font-semibold">上次晚上打卡时间: {night}</h2>
+          <h2 className="text-lg font-semibold">今天已经工作时长: {duration}</h2>
+          <h2 className="text-lg font-semibold">本周已经工作时长: {weeklyDuration}</h2>
         </div>
       </div>
     </>
