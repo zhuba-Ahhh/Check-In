@@ -7,7 +7,7 @@ interface ToastProps {
   onClose?: () => void;
 }
 
-const Toast: React.FC<ToastProps> = ({ text, duration = 2000, onClose }) => {
+export const Toast: React.FC<ToastProps> = ({ text, duration = 2000, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose && onClose();
@@ -25,5 +25,3 @@ const Toast: React.FC<ToastProps> = ({ text, duration = 2000, onClose }) => {
     document.body
   );
 };
-
-export default Toast;
