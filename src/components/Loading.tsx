@@ -1,4 +1,4 @@
-const Loading = () => {
+export const Loading = () => {
   return (
     <div
       className="flex justify-center content-center min-h-screen"
@@ -8,5 +8,3 @@ const Loading = () => {
     </div>
   );
 };
-
-export default Loading;

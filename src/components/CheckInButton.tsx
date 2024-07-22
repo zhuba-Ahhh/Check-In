@@ -7,11 +7,11 @@ import {
   secondsToHMS,
   GetThisWeekTime,
 } from '../utils';
-import { CheckInType, dayData } from '../types';
+import { CheckInType, dayData, CheckInButtonProps } from '../types';
 import { Dayjs } from 'dayjs';
 import { copyToClipboard } from 'zhuba-tools';
 
-const CheckInButton = () => {
+export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInButtonProps) => {
   const [type, setType] = useState<CheckInType>('morning');
   const [morning, setMorning] = useState<string | null>(null);
   const [night, setNight] = useState<string | null>(null);
@@ -25,6 +25,7 @@ const CheckInButton = () => {
     const weekData = getLocalStorage('weekData');
     try {
       if (weekData) {
+        setExportData && setExportData(weekData);
         return JSON.parse(weekData);
       }
     } catch (error) {
@@ -32,7 +33,7 @@ const CheckInButton = () => {
       return [];
     }
     return [];
-  }, []);
+  }, [setExportData]);
 
   // 更新WeekData
   const updateWeekData = useCallback(
@@ -56,8 +57,8 @@ const CheckInButton = () => {
             night: type === 'night' ? stringNow : null,
           });
         }
-
-        setLocalStorage(`weekData`, JSON.stringify(newData));
+        const newStringData = JSON.stringify(newData);
+        setLocalStorage(`weekData`, newStringData);
         return newData;
       });
     },
@@ -156,7 +157,15 @@ const CheckInButton = () => {
   const exportData = useCallback(() => {
     const weekData = getWeekData();
     copyToClipboard(JSON.stringify(weekData));
-  }, [getWeekData]);
+    addToast({ text: '复制成功' });
+  }, [getWeekData, addToast]);
+
+  // 导入周打卡数据
+  const importData = useCallback(() => {
+    const weekData = getWeekData();
+    setExportData(JSON.stringify(weekData));
+    openModal();
+  }, [getWeekData, openModal, setExportData]);
 
   return (
     <>
@@ -167,12 +176,15 @@ const CheckInButton = () => {
         >
           <h2 className="text-lg font-bold">{type === 'morning' ? '早上打卡' : '晚上打卡'}</h2>
         </button>
-        <button className="btn btn-outline btn-info" onClick={exportData}>
+        <button className="mr-6 btn btn-outline btn-info" onClick={exportData}>
           <h2 className="text-lg font-bold">导出数据</h2>
+        </button>
+        <button className="btn btn-outline btn-secondary" onClick={importData}>
+          <h2 className="text-lg font-bold">导入数据</h2>
         </button>
       </div>
       <div className="card w-90 shadow-xl bg-teal-100 mt-6">
-        <div className="card-body">
+        <div className="card-body p-6">
           <h2 className="text-lg font-semibold">上次早上打卡时间: {morning}</h2>
           <h2 className="text-lg font-semibold">上次晚上打卡时间: {night}</h2>
           <h2 className="text-lg font-semibold">今天已经工作时长: {duration}</h2>
@@ -183,5 +195,3 @@ const CheckInButton = () => {
     </>
   );
 };
-
-export default CheckInButton;
