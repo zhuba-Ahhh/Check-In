@@ -7,11 +7,11 @@ import {
   secondsToHMS,
   GetThisWeekTime,
 } from '../utils';
-import { CheckInType, dayData } from '../types';
+import { CheckInType, dayData, CheckInButtonProps } from '../types';
 import { Dayjs } from 'dayjs';
 import { copyToClipboard } from 'zhuba-tools';
 
-const CheckInButton = () => {
+const CheckInButton = ({ addToast }: CheckInButtonProps) => {
   const [type, setType] = useState<CheckInType>('morning');
   const [morning, setMorning] = useState<string | null>(null);
   const [night, setNight] = useState<string | null>(null);
@@ -156,7 +156,8 @@ const CheckInButton = () => {
   const exportData = useCallback(() => {
     const weekData = getWeekData();
     copyToClipboard(JSON.stringify(weekData));
-  }, [getWeekData]);
+    addToast({ text: '复制成功' });
+  }, [getWeekData, addToast]);
 
   return (
     <>
@@ -172,7 +173,7 @@ const CheckInButton = () => {
         </button>
       </div>
       <div className="card w-90 shadow-xl bg-teal-100 mt-6">
-        <div className="card-body">
+        <div className="card-body p-6">
           <h2 className="text-lg font-semibold">上次早上打卡时间: {morning}</h2>
           <h2 className="text-lg font-semibold">上次晚上打卡时间: {night}</h2>
           <h2 className="text-lg font-semibold">今天已经工作时长: {duration}</h2>

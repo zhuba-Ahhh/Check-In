@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import Loading from './components/Loading';
 import CheckInButton from './components/CheckInButton';
+import { useToast } from './components/useToast';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const { ToastContainer, addToast } = useToast();
   useEffect(() => {
     setTimeout(() => {
       setIsLoading(false);
@@ -16,9 +18,10 @@ function App() {
         <Loading />
       ) : (
         <div className="flex flex-col items-center">
-          <CheckInButton />
+          <CheckInButton addToast={addToast}/>
         </div>
       )}
+      <ToastContainer />
     </div>
   );
 }
