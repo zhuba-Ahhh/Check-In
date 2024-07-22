@@ -91,6 +91,10 @@ export default defineConfig({
             return id.toString().split('node_modules/')[1].split('/')[0].toString();
           }
         },
+        globals: {
+          react: 'React',
+          'react-dom': 'ReactDom',
+        },
       },
       treeshake: {
         preset: 'recommended',

@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getLocalStorage, setLocalStorage, dayJs, newDate } from '../utils';
+import {
+  getLocalStorage,
+  setLocalStorage,
+  dayJs,
+  newDate,
+  secondsToHMS,
+  GetThisWeekTime,
+} from '../utils';
 import { CheckInType, dayData } from '../types';
 import { Dayjs } from 'dayjs';
 
@@ -10,6 +17,7 @@ const CheckInButton = () => {
   const [weekData, setWeekData] = useState<Array<dayData>>([]);
   const [duration, setDuration] = useState<string | null>(null);
   const [weeklyDuration, setWeeklyDuration] = useState<string | null>(null);
+  const [residualDuration, setResidualDuration] = useState<string | null>(null);
 
   const updateWeekData = useCallback(
     (now: Date) => {
@@ -97,10 +105,8 @@ const CheckInButton = () => {
 
     // 只有当总秒数大于0时才进行格式化
     if (totalSeconds > 0) {
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      setWeeklyDuration(`${hours} 小时 ${minutes} 分 ${seconds} 秒`);
+      setWeeklyDuration(secondsToHMS(totalSeconds));
+      setResidualDuration(secondsToHMS(GetThisWeekTime() - totalSeconds));
     }
   }, [weekData]);
 
@@ -146,6 +152,7 @@ const CheckInButton = () => {
           <h2 className="text-lg font-semibold">上次晚上打卡时间: {night}</h2>
           <h2 className="text-lg font-semibold">今天已经工作时长: {duration}</h2>
           <h2 className="text-lg font-semibold">本周已经工作时长: {weeklyDuration}</h2>
+          <h2 className="text-lg font-semibold">本周剩余工作时长: {residualDuration}</h2>
         </div>
       </div>
     </>
