@@ -9,6 +9,7 @@ import {
 } from '../utils';
 import { CheckInType, dayData } from '../types';
 import { Dayjs } from 'dayjs';
+import { copyToClipboard } from 'zhuba-tools';
 
 const CheckInButton = () => {
   const [type, setType] = useState<CheckInType>('morning');
@@ -19,6 +20,21 @@ const CheckInButton = () => {
   const [weeklyDuration, setWeeklyDuration] = useState<string | null>(null);
   const [residualDuration, setResidualDuration] = useState<string | null>(null);
 
+  // 获取周打卡数据
+  const getWeekData = useCallback((): Array<dayData> => {
+    const weekData = getLocalStorage('weekData');
+    try {
+      if (weekData) {
+        return JSON.parse(weekData);
+      }
+    } catch (error) {
+      console.log(error);
+      return [];
+    }
+    return [];
+  }, []);
+
+  // 更新WeekData
   const updateWeekData = useCallback(
     (now: Date) => {
       const stringNow = String(now);
@@ -47,6 +63,7 @@ const CheckInButton = () => {
     },
     [type]
   );
+
   // 点击打卡按钮
   const handleCheckIn = useCallback(() => {
     const now = newDate();
@@ -66,14 +83,11 @@ const CheckInButton = () => {
   useEffect(() => {
     const morningDate = getLocalStorage('morning');
     const nightDate = getLocalStorage('night');
-    const weekData = getLocalStorage('weekData');
-    try {
-      if (weekData) {
-        setWeekData(JSON.parse(weekData));
-      }
-    } catch (error) {
-      console.error(error);
+    const weekData = getWeekData();
+    if (weekData.length > 0) {
+      setWeekData(weekData);
     }
+
     if (morningDate) {
       const dayJSmorningDate = dayJs(morningDate);
       if (dayJSmorningDate.format('dd') === dayJs().format('dd')) {
@@ -83,7 +97,7 @@ const CheckInButton = () => {
     }
 
     nightDate && setNight(dayJs(nightDate).format('MM-DD HH-mm'));
-  }, []);
+  }, [getWeekData]);
 
   // 本周已经工作时长
   useEffect(() => {
@@ -138,14 +152,25 @@ const CheckInButton = () => {
     };
   }, [morning, night, updateWeekData]);
 
+  // 导出周打卡数据到剪贴板
+  const exportData = useCallback(() => {
+    const weekData = getWeekData();
+    copyToClipboard(JSON.stringify(weekData));
+  }, [getWeekData]);
+
   return (
     <>
-      <button
-        className={type === 'morning' ? 'btn btn-outline' : 'btn btn-accent'}
-        onClick={handleCheckIn}
-      >
-        <h2 className="text-lg font-bold">{type === 'morning' ? '早上打卡' : '晚上打卡'}</h2>
-      </button>
+      <div>
+        <button
+          className={type === 'morning' ? 'btn mr-6 btn-outline' : 'btn mr-6 btn-accent'}
+          onClick={handleCheckIn}
+        >
+          <h2 className="text-lg font-bold">{type === 'morning' ? '早上打卡' : '晚上打卡'}</h2>
+        </button>
+        <button className="btn btn-outline btn-info" onClick={exportData}>
+          <h2 className="text-lg font-bold">导出数据</h2>
+        </button>
+      </div>
       <div className="card w-90 shadow-xl bg-teal-100 mt-6">
         <div className="card-body">
           <h2 className="text-lg font-semibold">上次早上打卡时间: {morning}</h2>
