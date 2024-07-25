@@ -21,7 +21,7 @@ function App() {
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
-  }, [addToast]);
+  }, []);
 
   const [exportData, setExportData] = useState<object>({});
 
