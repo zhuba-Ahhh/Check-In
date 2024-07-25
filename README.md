@@ -1,8 +1,8 @@
 # Check-In
 
-[home](./home.png)
+![image](./home.png)
 
-TODO:
+## TODO:
 - 设置 配置每日时长等
 - 补卡
 - 优化导入
