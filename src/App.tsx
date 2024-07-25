@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Loading,
   Modal,
@@ -10,18 +10,29 @@ import {
   Tabs,
 } from './components';
 import { CheckInButton } from './views';
+import { setLocalStorage } from './utils';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const { ToastContainer, addToast } = useToast();
   const { isOpen, openModal, closeModal } = useModal();
+
   useEffect(() => {
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
-  }, []);
+  }, [addToast]);
 
   const [exportData, setExportData] = useState<object>({});
+
+  const onOk = useCallback(() => {
+    setLocalStorage(`weekData`, JSON.stringify(exportData));
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      addToast({ text: '导入成功' });
+    }, 1000);
+  }, [addToast, exportData]);
 
   return (
     <ErrorBoundary>
@@ -38,14 +49,9 @@ function App() {
           </div>
         )}
         <ToastContainer />
-        <Modal isOpen={isOpen} onClose={closeModal} title={'导入数据'}>
+        <Modal isOpen={isOpen} onClose={closeModal} title={'导入数据'} onOk={onOk}>
           <Tabs
             tabs={[
-              {
-                key: 'JSON',
-                label: 'JsonEditor',
-                content: <JsonEditor defaultValue={exportData} />,
-              },
               {
                 key: 'Textarea',
                 label: 'Textarea',
@@ -53,10 +59,19 @@ function App() {
                   <Textarea
                     defaultValue={JSON.stringify(exportData)}
                     onChange={(event) => {
-                      console.log('======= event =======\n', event.target.value);
+                      try {
+                        setExportData(JSON.parse(event.target.value));
+                      } catch (error) {
+                        /* empty */
+                      }
                     }}
                   />
                 ),
+              },
+              {
+                key: 'JSON',
+                label: 'JsonEditor',
+                content: <JsonEditor value={exportData} />,
               },
             ]}
           />
