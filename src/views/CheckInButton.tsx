@@ -10,6 +10,7 @@ import {
 import { CheckInType, dayData, CheckInButtonProps } from '../types';
 import { Dayjs } from 'dayjs';
 import { copyToClipboard } from 'zhuba-tools';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInButtonProps) => {
   const [type, setType] = useState<CheckInType>('morning');
@@ -25,8 +26,9 @@ export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInBut
     const weekData = getLocalStorage('weekData');
     try {
       if (weekData) {
-        setExportData && setExportData(weekData);
-        return JSON.parse(weekData);
+        const weekDataObject = JSON.parse(weekData);
+        setExportData && setExportData(weekDataObject);
+        return weekDataObject;
       }
     } catch (error) {
       console.log(error);
@@ -163,12 +165,12 @@ export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInBut
   // 导入周打卡数据
   const importData = useCallback(() => {
     const weekData = getWeekData();
-    setExportData(JSON.stringify(weekData));
+    setExportData(weekData);
     openModal();
   }, [getWeekData, openModal, setExportData]);
 
   return (
-    <>
+    <ErrorBoundary>
       <div>
         <button
           className={type === 'morning' ? 'btn mr-6 btn-outline' : 'btn mr-6 btn-accent'}
@@ -192,6 +194,6 @@ export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInBut
           <h2 className="text-lg font-semibold">本周剩余工作时长: {residualDuration}</h2>
         </div>
       </div>
-    </>
+    </ErrorBoundary>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { ErrorBoundary } from './ErrorBoundary';
 
 interface ToastProps {
   text: string;
@@ -19,9 +20,11 @@ export const Toast: React.FC<ToastProps> = ({ text, duration = 2000, onClose }) 
   }, [duration, onClose]);
 
   return ReactDOM.createPortal(
-    <div className="toast toast-top toast-center">
-      <div className="alert alert-success flex">{text}</div>
-    </div>,
+    <ErrorBoundary>
+      <div className="toast toast-top toast-center">
+        <div className="alert alert-success flex">{text}</div>
+      </div>
+    </ErrorBoundary>,
     document.body
   );
 };

@@ -6,5 +6,5 @@ export interface ToastOptions {
 export type CheckInButtonProps = {
   addToast: ({ text, duration }: ToastOptions) => void;
   openModal: () => void;
-  setExportData: React.Dispatch<React.SetStateAction<string>>;
+  setExportData: React.Dispatch<React.SetStateAction<object>>;
 };

@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { CheckInButton, Loading, Modal, Textarea, useToast, useModal } from './components';
+import {
+  Loading,
+  Modal,
+  useToast,
+  useModal,
+  JsonEditor,
+  ErrorBoundary,
+  Textarea,
+  Tabs,
+} from './components';
+import { CheckInButton } from './views';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -11,27 +21,48 @@ function App() {
     }, 1000);
   }, []);
 
-  const [exportData, setExportData] = useState('');
+  const [exportData, setExportData] = useState<object>({});
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      {isLoading ? (
-        <Loading />
-      ) : (
-        <div className="flex flex-col items-center">
-          <CheckInButton addToast={addToast} openModal={openModal} setExportData={setExportData} />
-        </div>
-      )}
-      <ToastContainer />
-      <Modal isOpen={isOpen} onClose={closeModal} title={'导入数据'}>
-        <Textarea
-          defaultValue={exportData}
-          onChange={(value) => {
-            console.log(value.target.value);
-          }}
-        />
-      </Modal>
-    </div>
+    <ErrorBoundary>
+      <div className="flex justify-center items-center h-screen">
+        {isLoading ? (
+          <Loading />
+        ) : (
+          <div className="flex flex-col items-center">
+            <CheckInButton
+              addToast={addToast}
+              openModal={openModal}
+              setExportData={setExportData}
+            />
+          </div>
+        )}
+        <ToastContainer />
+        <Modal isOpen={isOpen} onClose={closeModal} title={'导入数据'}>
+          <Tabs
+            tabs={[
+              {
+                key: 'JSON',
+                label: 'JsonEditor',
+                content: <JsonEditor defaultValue={exportData} />,
+              },
+              {
+                key: 'Textarea',
+                label: 'Textarea',
+                content: (
+                  <Textarea
+                    defaultValue={JSON.stringify(exportData)}
+                    onChange={(event) => {
+                      console.log('======= event =======\n', event.target.value);
+                    }}
+                  />
+                ),
+              },
+            ]}
+          />
+        </Modal>
+      </div>
+    </ErrorBoundary>
   );
 }
 
