@@ -26,10 +26,6 @@ export default defineConfig({
     react(),
     tsconfigPaths(),
     svgrPlugin(),
-    visualizer({
-      // 打包完成后自动打开浏览器，显示产物体积报告
-      open: false,
-    }),
     importToCDN({
       modules: ['react', 'react-dom', 'axios', 'dayjs'],
       enableInDevMode: true,
@@ -66,6 +62,10 @@ export default defineConfig({
           },
         ],
       },
+    }),
+    visualizer({
+      // 打包完成后自动打开浏览器，显示产物体积报告
+      open: false,
     }),
   ],
   // server: {
