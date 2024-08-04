@@ -123,7 +123,12 @@ export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInBut
     // 只有当总秒数大于0时才进行格式化
     if (totalSeconds > 0) {
       setWeeklyDuration(secondsToHMS(totalSeconds));
-      setResidualDuration(secondsToHMS(GetThisWeekTime() - totalSeconds));
+      const residualSeconds = GetThisWeekTime() - totalSeconds;
+      if (residualSeconds >= 0) {
+        setResidualDuration(secondsToHMS(residualSeconds));
+      } else {
+        setResidualDuration(secondsToHMS(0));
+      }
     }
   }, [weekData]);
 
