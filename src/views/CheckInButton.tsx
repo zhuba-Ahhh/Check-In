@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import {
   getLocalStorage,
   setLocalStorage,
@@ -8,166 +8,169 @@ import {
   GetThisWeekTime,
 } from '../utils';
 import { CheckInType, dayData, CheckInButtonProps } from '../types';
-import { Dayjs } from 'dayjs';
 import { copyToClipboard } from 'zhuba-tools';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+// import { Calendar } from '../components/Calendar';
 
-export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInButtonProps) => {
-  const [type, setType] = useState<CheckInType>('morning');
-  const [morning, setMorning] = useState<string | null>(null);
-  const [night, setNight] = useState<string | null>(null);
-  const [weekData, setWeekData] = useState<Array<dayData>>([]);
-  const [duration, setDuration] = useState<string | null>(null);
-  const [weeklyDuration, setWeeklyDuration] = useState<string | null>(null);
-  const [residualDuration, setResidualDuration] = useState<string | null>(null);
+const STORAGE_KEYS = {
+  MORNING: 'morning',
+  NIGHT: 'night',
+  WEEK_DATA: 'weekData',
+};
 
-  // 获取周打卡数据
+const DATE_FORMAT = 'MM-DD HH-mm';
+
+const initialState = {
+  type: 'morning' as CheckInType,
+  morning: null as string | null,
+  night: null as string | null,
+  weekData: [] as Array<dayData>,
+  duration: null as string | null,
+};
+
+type Action =
+  | { type: 'SET_TYPE'; payload: CheckInType }
+  | { type: 'SET_MORNING'; payload: string | null }
+  | { type: 'SET_NIGHT'; payload: string | null }
+  | { type: 'SET_WEEK_DATA'; payload: Array<dayData> }
+  | { type: 'SET_DURATION'; payload: string | null };
+
+const reducer = (state: typeof initialState, action: Action) => {
+  switch (action.type) {
+    case 'SET_TYPE':
+      return { ...state, type: action.payload };
+    case 'SET_MORNING':
+      return { ...state, morning: action.payload };
+    case 'SET_NIGHT':
+      return { ...state, night: action.payload };
+    case 'SET_WEEK_DATA':
+      return { ...state, weekData: action.payload };
+    case 'SET_DURATION':
+      return { ...state, duration: action.payload };
+    default:
+      return state;
+  }
+};
+
+const useWeekData = (setExportData: React.Dispatch<React.SetStateAction<object>>) => {
   const getWeekData = useCallback((): Array<dayData> => {
-    const weekData = getLocalStorage('weekData');
+    const weekData = getLocalStorage(STORAGE_KEYS.WEEK_DATA);
     try {
       if (weekData) {
         const weekDataObject = JSON.parse(weekData);
-        setExportData && setExportData(weekDataObject);
+        setExportData?.(weekDataObject);
         return weekDataObject;
       }
     } catch (error) {
-      console.log(error);
-      return [];
+      console.error('Error parsing week data:', error);
     }
     return [];
   }, [setExportData]);
 
-  // 更新WeekData
+  return { getWeekData };
+};
+
+export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInButtonProps) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { getWeekData } = useWeekData(setExportData);
+
   const updateWeekData = useCallback(
     (now: Date) => {
       const stringNow = String(now);
       const dateKey = dayJs(now).format('YYYY-MM-DD');
-      // 更新weekData
-      setWeekData((prevData) => {
-        const newData = [...prevData];
-        const index = newData.findIndex((item) => item.date === dateKey);
-        if (index !== -1) {
-          if (type === 'morning') {
-            newData[index].morning = stringNow;
-          } else {
-            newData[index].night = stringNow;
+      dispatch({
+        type: 'SET_WEEK_DATA',
+        payload: state.weekData.map((item) => {
+          if (item.date === dateKey) {
+            return { ...item, [state.type]: stringNow };
           }
-        } else {
-          newData.push({
-            date: dateKey,
-            morning: type === 'morning' ? stringNow : null,
-            night: type === 'night' ? stringNow : null,
-          });
-        }
-        const newStringData = JSON.stringify(newData);
-        setLocalStorage(`weekData`, newStringData);
-        return newData;
+          return item;
+        }),
       });
+      setLocalStorage(STORAGE_KEYS.WEEK_DATA, JSON.stringify(state.weekData));
     },
-    [type]
+    [state.type, state.weekData]
   );
 
-  // 点击打卡按钮
   const handleCheckIn = useCallback(() => {
     const now = newDate();
-    setLocalStorage(`${type}`, String(now));
-    if (type === 'morning') {
-      setMorning(dayJs(now).format('MM-DD HH-mm'));
-      setType('night');
+    setLocalStorage(state.type, String(now));
+    if (state.type === 'morning') {
+      dispatch({ type: 'SET_MORNING', payload: dayJs(now).format(DATE_FORMAT) });
+      dispatch({ type: 'SET_TYPE', payload: 'night' });
     } else {
-      setNight(dayJs(now).format('MM-DD HH-mm'));
+      dispatch({ type: 'SET_NIGHT', payload: dayJs(now).format(DATE_FORMAT) });
     }
-
-    // 更新weekData
     updateWeekData(now);
-  }, [type, updateWeekData]);
+  }, [state.type, updateWeekData]);
 
-  // 初始化
   useEffect(() => {
-    const morningDate = getLocalStorage('morning');
-    const nightDate = getLocalStorage('night');
+    const morningDate = getLocalStorage(STORAGE_KEYS.MORNING);
+    const nightDate = getLocalStorage(STORAGE_KEYS.NIGHT);
     const weekData = getWeekData();
     if (weekData.length > 0) {
-      setWeekData(weekData);
+      dispatch({ type: 'SET_WEEK_DATA', payload: weekData });
     }
 
     if (morningDate) {
       const dayJSmorningDate = dayJs(morningDate);
       if (dayJSmorningDate.format('dd') === dayJs().format('dd')) {
-        setType('night');
+        dispatch({ type: 'SET_TYPE', payload: 'night' });
       }
-      setMorning(dayJSmorningDate.format('MM-DD HH-mm'));
+      dispatch({ type: 'SET_MORNING', payload: dayJSmorningDate.format(DATE_FORMAT) });
     }
 
-    nightDate && setNight(dayJs(nightDate).format('MM-DD HH-mm'));
+    nightDate && dispatch({ type: 'SET_NIGHT', payload: dayJs(nightDate).format(DATE_FORMAT) });
   }, [getWeekData]);
 
-  // 本周已经工作时长
-  useEffect(() => {
+  const { weeklyDuration, residualDuration } = useMemo(() => {
     let totalSeconds = 0;
     const currentWeek = dayJs().week();
-    const morningToNightDiff = (morning: Dayjs, night: Dayjs) => night.diff(morning, 'second');
-    // 遍历weekData，只计算当前周的工作时长
-    for (let i = 0; i < weekData.length; i++) {
-      const data = weekData[i];
+    state.weekData.forEach((data) => {
       const { date, morning, night } = data;
-
-      // 快速检查，避免不必要的dayJs转换和计算
-      if (!morning || !night || dayJs(date).week() !== currentWeek) continue;
-
-      // 计算差值，确保为正数
-      const diffSeconds = morningToNightDiff(dayJs(morning), dayJs(night));
-      if (diffSeconds > 0) totalSeconds += diffSeconds;
-    }
-
-    // 只有当总秒数大于0时才进行格式化
-    if (totalSeconds > 0) {
-      setWeeklyDuration(secondsToHMS(totalSeconds));
-      const residualSeconds = GetThisWeekTime() - totalSeconds;
-      if (residualSeconds >= 0) {
-        setResidualDuration(secondsToHMS(residualSeconds));
-      } else {
-        setResidualDuration(secondsToHMS(0));
+      if (morning && night && dayJs(date).week() === currentWeek) {
+        const diffSeconds = dayJs(night).diff(dayJs(morning), 'second');
+        if (diffSeconds > 0) totalSeconds += diffSeconds;
       }
-    }
-  }, [weekData]);
+    });
 
-  // 今天已经工作时长
+    if (totalSeconds > 0) {
+      const weeklyDuration = secondsToHMS(totalSeconds);
+      const residualSeconds = GetThisWeekTime() - totalSeconds;
+      const residualDuration = secondsToHMS(Math.max(residualSeconds, 0));
+      return { weeklyDuration, residualDuration };
+    }
+    return { weeklyDuration: null, residualDuration: null };
+  }, [state.weekData]);
+
   useEffect(() => {
     let timerId: number | undefined = void 0;
-    if (morning && night) {
-      const morningTime = dayJs(getLocalStorage('morning'));
+    if (state.morning && state.night) {
+      const morningTime = dayJs(getLocalStorage(STORAGE_KEYS.MORNING));
       const updateDuration = () => {
         const now = newDate();
         const currentTime = dayJs(now);
         const diffSeconds = currentTime.diff(morningTime, 'second');
-        const hours = Math.floor(diffSeconds / 3600);
-        const minutes = Math.floor((diffSeconds - hours * 3600) / 60);
-        const seconds = diffSeconds % 60;
-        setDuration(`${hours} 小时 ${minutes} 分 ${seconds} 秒`);
-        setLocalStorage(`night`, String(now));
-
+        dispatch({ type: 'SET_DURATION', payload: secondsToHMS(diffSeconds) });
+        setLocalStorage(STORAGE_KEYS.NIGHT, String(now));
         updateWeekData(now);
       };
 
       updateDuration();
-
-      timerId = setInterval(updateDuration, 1000); // 每秒更新一次
+      timerId = setInterval(updateDuration, 1000);
     }
 
     return () => {
-      clearInterval(timerId); // 清除计时器，即使没有night值也要执行
+      clearInterval(timerId);
     };
-  }, [morning, night, updateWeekData]);
+  }, [state.morning, state.night, updateWeekData]);
 
-  // 导出周打卡数据到剪贴板
   const exportData = useCallback(() => {
     const weekData = getWeekData();
     copyToClipboard(JSON.stringify(weekData));
     addToast({ text: '复制成功' });
   }, [getWeekData, addToast]);
 
-  // 导入周打卡数据
   const importData = useCallback(() => {
     const weekData = getWeekData();
     setExportData(weekData);
@@ -178,10 +181,12 @@ export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInBut
     <ErrorBoundary>
       <div>
         <button
-          className={type === 'morning' ? 'btn mr-6 btn-outline' : 'btn mr-6 btn-accent'}
+          className={state.type === 'morning' ? 'btn mr-6 btn-outline' : 'btn mr-6 btn-accent'}
           onClick={handleCheckIn}
         >
-          <h2 className="text-lg font-bold">{type === 'morning' ? '早上打卡' : '晚上打卡'}</h2>
+          <h2 className="text-lg font-bold">
+            {state.type === 'morning' ? '早上打卡' : '晚上打卡'}
+          </h2>
         </button>
         <button className="mr-6 btn btn-outline btn-info" onClick={exportData}>
           <h2 className="text-lg font-bold">导出数据</h2>
@@ -192,13 +197,14 @@ export const CheckInButton = ({ addToast, openModal, setExportData }: CheckInBut
       </div>
       <div className="card w-90 shadow-xl bg-teal-100 mt-6">
         <div className="card-body p-6">
-          <h2 className="text-lg font-semibold">上次早上打卡时间: {morning}</h2>
-          <h2 className="text-lg font-semibold">上次晚上打卡时间: {night}</h2>
-          <h2 className="text-lg font-semibold">今天已经工作时长: {duration}</h2>
+          <h2 className="text-lg font-semibold">上次早上打卡时间: {state.morning}</h2>
+          <h2 className="text-lg font-semibold">上次晚上打卡时间: {state.night}</h2>
+          <h2 className="text-lg font-semibold">今天已经工作时长: {state.duration}</h2>
           <h2 className="text-lg font-semibold">本周已经工作时长: {weeklyDuration}</h2>
           <h2 className="text-lg font-semibold">本周剩余工作时长: {residualDuration}</h2>
         </div>
       </div>
+      {/* <Calendar weekData={state.weekData} /> */}
     </ErrorBoundary>
   );
 };
